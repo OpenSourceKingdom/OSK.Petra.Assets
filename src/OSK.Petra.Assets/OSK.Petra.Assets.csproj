@@ -1,0 +1,23 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<TargetFramework>netstandard2.1</TargetFramework>
+		<Nullable>enable</Nullable>
+		<LangVersion>14</LangVersion>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Include="Ports\IAssetManager.cs" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageReference Include="OSK.Operations.Outputs" Version="1.4.0" />
+		<PackageReference Include="OSK.Operations.Workflows" Version="1.0.0" />
+		<PackageReference Include="OSK.Petra.Modules.Services" Version="0.5.0" />
+		<PackageReference Include="PolySharp" Version="1.16.0">
+		  <PrivateAssets>all</PrivateAssets>
+		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+		</PackageReference>
+	</ItemGroup>
+
+</Project>

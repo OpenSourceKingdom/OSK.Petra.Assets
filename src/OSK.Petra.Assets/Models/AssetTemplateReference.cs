@@ -33,7 +33,7 @@ public readonly struct AssetTemplateReference<TTemplate, TTransform>
     {
     }
 
-    internal AssetTemplateReference(EntityAssetIdentifier? identifier, TTemplate? template, bool cleanupOnDispose)
+    private AssetTemplateReference(EntityAssetIdentifier? identifier, TTemplate? template, bool cleanupOnDispose)
     {
         Template = template ?? throw new ArgumentNullException(nameof(template), "An asset reference for a template can not have an undefined template.");
         AssetIdentifier = identifier;

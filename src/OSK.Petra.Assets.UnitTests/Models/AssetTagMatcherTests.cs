@@ -88,7 +88,7 @@ public class AssetTagMatcherTests
         // Arrange
         var matcher = new AssetTagMatcher(
             "TestCategory",
-            [new AssetTagName("")]);
+            []);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TestCategory"),

@@ -1,6 +1,6 @@
-﻿using OSK.Petra.Modules;
+﻿using OSK.Petra.Assets.Events;
+using OSK.Petra.Modules;
 using System;
-using OSK.Petra.Assets.Events;
 
 namespace OSK.Petra.Assets.Models;
 

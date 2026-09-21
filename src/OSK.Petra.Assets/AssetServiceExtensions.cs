@@ -1,9 +1,9 @@
 ﻿using OSK.Operations.Outputs.Models;
+using OSK.Petra.Assets.Models;
+using OSK.Petra.Assets.Ports;
 using System;
 using System.Threading;
 using System.Threading.Tasks;
-using OSK.Petra.Assets.Models;
-using OSK.Petra.Assets.Ports;
 
 namespace OSK.Petra.Assets;
 

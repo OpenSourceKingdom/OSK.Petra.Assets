@@ -1,5 +1,8 @@
 ﻿namespace OSK.Petra.Assets.Models;
 
+/// <summary>
+/// Describes the behavior of the loaded module once it has finalized
+/// </summary>
 public enum ModuleLoadBehavior
 {
     /// <summary>

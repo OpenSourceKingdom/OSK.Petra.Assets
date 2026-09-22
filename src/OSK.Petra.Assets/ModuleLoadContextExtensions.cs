@@ -9,6 +9,11 @@ public static class ModuleLoadContextExtensions
 {
     extension(IModuleLoadContext context)
     {
+        /// <summary>
+        /// Awaits the underlying module load context until it has loaded or failed
+        /// </summary>
+        /// <param name="cancellationToken">A token to cancel the operation</param>
+        /// <returns>THe task for the completion call</returns>
         public async Task WaitForLoadCompletedAsync(CancellationToken cancellationToken = default)
         {
             if (context.LoadProgress.State is not ProgressState.InProgress || context.LoadProgress.State is not ProgressState.NotStarted)

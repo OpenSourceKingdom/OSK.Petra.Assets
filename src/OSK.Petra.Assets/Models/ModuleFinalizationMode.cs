@@ -1,9 +1,9 @@
 ﻿namespace OSK.Petra.Assets.Models;
 
 /// <summary>
-/// The different strategies for completing asset load operations
+/// The different modes for finalizing module load operations
 /// </summary>
-public enum LoadCompletionMode
+public enum ModuleFinalizationMode
 {
     /// <summary>
     /// The module asset is immediately loaded to the root as soon as it is completed

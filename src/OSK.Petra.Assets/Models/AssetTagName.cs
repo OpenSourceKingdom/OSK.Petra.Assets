@@ -1,5 +1,9 @@
 ﻿namespace OSK.Petra.Assets.Models;
 
+/// <summary>
+/// Represents a strongly typed asset tag name
+/// </summary>
+/// <param name="Name">The name of the tag</param>
 public readonly record struct AssetTagName(string Name)
 {
     #region Operators

@@ -33,6 +33,18 @@ internal class AssetService(IAssetManager assetManager, ILoadScreen loadScreen, 
 
     public Task<Output> InitializeAsync(AssetServiceOptions? options = null, CancellationToken cancellationToken = default)
     {
+        foreach (var entry in _entryLookup.Values)
+        {
+            entry.Instantiator.Dispose();
+        }
+        foreach (var loader in _loaderLookup.Values)
+        {
+            loader.Dispose();
+        }
+
+        _entryLookup.Clear();
+        _loaderLookup.Clear();
+
         _options = options ?? new();
         database.StartInitialization();
         return assetManager.InitializeDatabaseAsync(database, cancellationToken);

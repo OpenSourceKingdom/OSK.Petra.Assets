@@ -8,6 +8,12 @@ using System;
 
 namespace OSK.Petra.Assets;
 
+/// <summary>
+/// A base class for module loaders. Requires a type constraint
+/// </summary>
+/// <typeparam name="TLoadParameters">The type of load parameters the loader expects</typeparam>
+/// <param name="descriptor">The descriptor for the loader</param>
+/// <param name="parameters">The parameters to use when loading</param>
 public abstract class ModuleLoader<TLoadParameters>(IModuleDescriptor descriptor, TLoadParameters parameters)
     : IModuleLoader
     where TLoadParameters: ModuleLoadParameters
@@ -59,7 +65,7 @@ public abstract class ModuleLoader<TLoadParameters>(IModuleDescriptor descriptor
         {
             case ProgressState.Complete:
                 LoadEvent?.Invoke(new ModuleLoadCompleteEvent(this));
-                if (Parameters.LoadCompletionMode is LoadCompletionMode.Immediate)
+                if (Parameters.FinalizationMode is ModuleFinalizationMode.Immediate)
                 {
                     FinalizeLoad();
                 }

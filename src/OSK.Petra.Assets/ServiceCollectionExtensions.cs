@@ -10,6 +10,10 @@ public static class ServiceCollectionExtensions
 {
     extension(IServiceCollection services)
     {
+        /// <summary>
+        /// Adds all the required asset system code to the DI
+        /// </summary>
+        /// <returns>The services for chaining</returns>
         public IServiceCollection AddAssets()
         {
             services.TryAddSingleton<IAssetService, AssetService>();

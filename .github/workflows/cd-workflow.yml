@@ -30,4 +30,4 @@ jobs:
     - name: Build
       run: dotnet build --no-restore ./src/${{ github.event.repository.name }}.slnx
     - name: Test
-      run: dotnet test --no-build --verbosity normal ./src/${{ github.event.repository.name }}.slnx
+      run: dotnet test --no-build --verbosity normal --solution ./src/${{ github.event.repository.name }}.slnx

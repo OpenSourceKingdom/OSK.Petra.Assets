@@ -21,9 +21,9 @@ internal class AssetService(IAssetManager assetManager, ILoadScreen loadScreen, 
 {
     #region Variables
 
-    private AssetServiceOptions _options = new();
-    private readonly ConcurrentDictionary<EntityAssetIdentifier, EntityLookupEntry> _entryLookup = [];
-    private readonly ConcurrentDictionary<ModuleAssetIdentifier, IModuleLoader> _loaderLookup = [];
+    internal AssetServiceOptions _options = new();
+    internal readonly ConcurrentDictionary<EntityAssetIdentifier, EntityLookupEntry> _entryLookup = [];
+    internal readonly ConcurrentDictionary<ModuleAssetIdentifier, IModuleLoader> _loaderLookup = [];
 
     #endregion
 
@@ -56,7 +56,7 @@ internal class AssetService(IAssetManager assetManager, ILoadScreen loadScreen, 
         {
             var loader = _loaderLookup[key];
             loader.Update(deltaTime);
-            if (loader.LoadProgress.IsComplete)
+            if (loader.LoadProgress.IsFinished)
             {
                 _loaderLookup.Remove(key, out _);
             }
@@ -79,6 +79,11 @@ internal class AssetService(IAssetManager assetManager, ILoadScreen loadScreen, 
         where TEntity: class
         where TTransform : ITransform
     {
+        if (parameters is null)
+        {
+            throw new ArgumentNullException(nameof(parameters));
+        }
+
         var descriptor = parameters.AssetReference.AssetIdentifier is not null
             ? database.GetEntity(parameters.AssetReference.AssetIdentifier.Value)
             : null;
@@ -90,7 +95,7 @@ internal class AssetService(IAssetManager assetManager, ILoadScreen loadScreen, 
 
         if (assetId is not null && _entryLookup.TryGetValue(assetId.Value, out entry))
         {
-            if (_options.InstantiatorIdleDisposalTimeout.HasValue)
+            if (_options.InstantiatorIdleDisposalTimeout is { TotalSeconds :> 0 })
             {
                 entry.LastUsed = DateTime.Now;
             }

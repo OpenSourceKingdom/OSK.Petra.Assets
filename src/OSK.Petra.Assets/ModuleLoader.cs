@@ -38,7 +38,7 @@ public abstract class ModuleLoader<TLoadParameters>(IModuleDescriptor descriptor
 
     public void FinalizeLoad()
     {
-        if (!LoadProgress.IsComplete || _finalized)
+        if (!LoadProgress.IsFinished || _finalized)
         {
             return;
         }
@@ -87,7 +87,7 @@ public abstract class ModuleLoader<TLoadParameters>(IModuleDescriptor descriptor
         }
 
         DisposeLoader();
-        LoadProgress = LoadProgress.IsComplete
+        LoadProgress = LoadProgress.IsFinished
             ? LoadProgress
             : new(Out.Error(OutputStatus.Timeout, "Loader disposed"));
 

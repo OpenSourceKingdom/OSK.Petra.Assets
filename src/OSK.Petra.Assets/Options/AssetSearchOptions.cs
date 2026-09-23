@@ -23,7 +23,7 @@ public readonly struct AssetSearchOptions
     public Guid[]? AssetPackageIds { get; init; }
 
     /// <summary>
-    /// The collection of tag matchers to use when matching assets for a search
+    /// The collection of tag filters to use when matching assets for a search
     /// </summary>
     /// <remarks>
     /// 💡Notes:
@@ -31,12 +31,7 @@ public readonly struct AssetSearchOptions
     /// <item>Empty/null filters will allow any tag</item>
     /// </list>
     /// </remarks>
-    public AssetTagMatcher[]? TagMatchers { get; init; }
-
-    /// <summary>
-    /// The behavior used when validating tags against the collection of tag matchers
-    /// </summary>
-    public TagClauseMatchBehavior TagClauseMatchBehavior { get; init; }
+    public AssetTagFilter[]? TagFilters { get; init; }
 
     #endregion
 
@@ -53,36 +48,21 @@ public readonly struct AssetSearchOptions
             AssetPackageIds = AssetPackageIds is null
                 ? [.. assetPackageIds]
                 : [.. AssetPackageIds.Concat(assetPackageIds)],
-            TagMatchers = TagMatchers,
-            TagClauseMatchBehavior = TagClauseMatchBehavior
+            TagFilters = TagFilters
         };
 
     /// <summary>
     /// Creates a search options with the included tag matchers
     /// </summary>
-    /// <param name="matcher">The matcher to include in the search</param>
+    /// <param name="filter">The filter to include in the search</param>
     /// <returns>A search options with the included data</returns>
-    public AssetSearchOptions WithTagMatcher(AssetTagMatcher matcher)
+    public AssetSearchOptions WithTagFilter(AssetTagFilter filter)
         => new()
         {
             AssetPackageIds = AssetPackageIds,
-            TagMatchers = TagMatchers is null
-                ? [matcher]
-                : [.. TagMatchers.Append(matcher)],
-            TagClauseMatchBehavior = TagClauseMatchBehavior
-        };
-
-    /// <summary>
-    /// Creates a search options with the included tag match behavior
-    /// </summary>
-    /// <param name="matchBehavior">The behavior to use when matching the tags</param>
-    /// <returns>A search options with the included data</returns>
-    public AssetSearchOptions WithTagMatcherClauseBehavior(TagClauseMatchBehavior matchBehavior)
-        => new()
-        {
-            AssetPackageIds = AssetPackageIds,
-            TagMatchers = TagMatchers,
-            TagClauseMatchBehavior = matchBehavior
+            TagFilters = TagFilters is null
+                ? [filter]
+                : [.. TagFilters.Append(filter)]
         };
 
     #endregion

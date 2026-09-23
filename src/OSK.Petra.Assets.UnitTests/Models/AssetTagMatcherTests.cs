@@ -2,7 +2,7 @@ using OSK.Petra.Assets.Models;
 
 namespace OSK.Petra.Assets.UnitTests;
 
-public class AssetTagMatcherTests
+public class AssetTagFilterTests
 {
     #region Matches
 
@@ -10,16 +10,16 @@ public class AssetTagMatcherTests
     public void Matches_MatchingTag_ReturnsTrue()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
-            [new AssetTagName("Tag1"), new AssetTagName("Tag2")]);
+            [new AssetTagValue("Tag1"), new AssetTagValue("Tag2")]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName("Tag1"));
+            new AssetTagValue("Tag1"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -29,16 +29,16 @@ public class AssetTagMatcherTests
     public void Matches_NonMatchingTagCategory_ReturnsFalse()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
-            [new AssetTagName("Tag1"), new AssetTagName("Tag2")]);
+            [new AssetTagValue("Tag1"), new AssetTagValue("Tag2")]);
 
         var nonMatchingCategoryTag = new AssetTag(
             new AssetTagCategory("OtherCategory"),
-            new AssetTagName("Tag2"));
+            new AssetTagValue("Tag2"));
 
         // Act
-        var result = matcher.Matches(nonMatchingCategoryTag);
+        var result = filter.Matches(nonMatchingCategoryTag);
 
         // Assert
         Assert.False(result);
@@ -48,16 +48,16 @@ public class AssetTagMatcherTests
     public void Matches_NonMatchingTagName_ReturnsFalse()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
-            [new AssetTagName("Tag1"), new AssetTagName("Tag2")]);
+            [new AssetTagValue("Tag1"), new AssetTagValue("Tag2")]);
 
         var nonMatchingNameTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName("Tag3"));
+            new AssetTagValue("Tag3"));
 
         // Act
-        var result = matcher.Matches(nonMatchingNameTag);
+        var result = filter.Matches(nonMatchingNameTag);
 
         // Assert
         Assert.False(result);
@@ -67,16 +67,16 @@ public class AssetTagMatcherTests
     public void Matches_EmptyCategoryFilter_AllowsAnyCategory()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "",
-            [new AssetTagName("Tag1"), new AssetTagName("Tag2")]);
+            [new AssetTagValue("Tag1"), new AssetTagValue("Tag2")]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("AnyCategory"),
-            new AssetTagName("Tag1"));
+            new AssetTagValue("Tag1"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -86,16 +86,16 @@ public class AssetTagMatcherTests
     public void Matches_EmptyTagNameFilter_AllowsAnyName()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
             []);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName("AnyName"));
+            new AssetTagValue("AnyName"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -105,16 +105,16 @@ public class AssetTagMatcherTests
     public void Matches_CaseInsensitiveCategory_MatchesRegardlessOfCase()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "testcategory",
-            [new AssetTagName("tag1")]);
+            [new AssetTagValue("tag1")]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TESTCATEGORY"),
-            new AssetTagName("tag1"));
+            new AssetTagValue("tag1"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -124,16 +124,16 @@ public class AssetTagMatcherTests
     public void Matches_CaseInsensitiveTagName_MatchesRegardlessOfCase()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "testcategory",
-            [new AssetTagName("TAG1")]);
+            [new AssetTagValue("TAG1")]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("testcategory"),
-            new AssetTagName("tag1"));
+            new AssetTagValue("tag1"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -146,16 +146,16 @@ public class AssetTagMatcherTests
     public void Matches_SingleMatchingTagName_ReturnsTrue(string tagName)
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
-            [new AssetTagName(tagName)]);
+            [new AssetTagValue(tagName)]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName(tagName));
+            new AssetTagValue(tagName));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -167,20 +167,20 @@ public class AssetTagMatcherTests
     public void Matches_MultipleMatchingTags_ReturnsTrue(params string[] tagNames)
     {
         // Arrange
-        var tagNamesConverted = new AssetTagName[tagNames.Length];
+        var tagNamesConverted = new AssetTagValue[tagNames.Length];
         for (int i = 0; i < tagNames.Length; i++)
         {
-            tagNamesConverted[i] = new AssetTagName(tagNames[i]);
+            tagNamesConverted[i] = new AssetTagValue(tagNames[i]);
         }
 
-        var matcher = new AssetTagMatcher("TestCategory", tagNamesConverted);
+        var filter = new AssetTagFilter("TestCategory", tagNamesConverted);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName(tagNames[0]));
+            new AssetTagValue(tagNames[0]));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);
@@ -190,16 +190,16 @@ public class AssetTagMatcherTests
     public void Matches_NullOrWhitespaceTagName_ReturnsFalse()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             "TestCategory",
-            [new AssetTagName("Tag1"), new AssetTagName("Tag2")]);
+            [new AssetTagValue("Tag1"), new AssetTagValue("Tag2")]);
 
         var nullTagNameTag = new AssetTag(
             new AssetTagCategory("TestCategory"),
-            new AssetTagName(""));
+            new AssetTagValue(""));
 
         // Act
-        var result = matcher.Matches(nullTagNameTag);
+        var result = filter.Matches(nullTagNameTag);
 
         // Assert
         Assert.False(result);
@@ -209,16 +209,16 @@ public class AssetTagMatcherTests
     public void Matches_NullCategoryFilter_AllowsAnyCategory()
     {
         // Arrange
-        var matcher = new AssetTagMatcher(
+        var filter = new AssetTagFilter(
             null!,
-            [new AssetTagName("Tag1")]);
+            [new AssetTagValue("Tag1")]);
 
         var matchingTag = new AssetTag(
             new AssetTagCategory("AnyCategory"),
-            new AssetTagName("Tag1"));
+            new AssetTagValue("Tag1"));
 
         // Act
-        var result = matcher.Matches(matchingTag);
+        var result = filter.Matches(matchingTag);
 
         // Assert
         Assert.True(result);

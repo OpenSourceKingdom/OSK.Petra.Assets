@@ -25,9 +25,14 @@ public readonly struct LoadProgress
     #region Varaibles
 
     /// <summary>
-    /// Describes if the progress of the load is complete
+    /// Describes if the progress of the load is finished (e.g. can be either successful or failed)
     /// </summary>
-    public bool IsComplete => State is ProgressState.Complete;
+    public bool IsFinished => State is ProgressState.Complete || State is ProgressState.Failed;
+
+    /// <summary>
+    /// Describes if the progress of the module load is successfully completed
+    /// </summary>
+    public bool IsReady => State is ProgressState.Complete;
 
     /// <summary>
     /// The state the load progress describes

@@ -6,7 +6,7 @@ using OSK.Petra.Assets.Models;
 using OSK.Petra.Assets.Options;
 using OSK.Petra.Assets.Ports;
 using OSK.Operations.Outputs;
-using OSK.Operations.Outputs.Models;
+using OSK.Petra.Assets.UnitTests._Helpers;
 
 namespace OSK.Petra.Assets.UnitTests;
 
@@ -31,12 +31,7 @@ public class AssetServiceTests
         _mockDatabase = new Mock<Internal.IAssetDatabase>();
         _mockServiceProvider = new Mock<IServiceProvider>();
 
-        _assetService = new AssetService(
-            _mockAssetManager.Object,
-            _mockLoadScreen.Object,
-            _mockDatabase.Object,
-            _mockServiceProvider.Object
-        );
+        _assetService = new AssetService(_mockAssetManager.Object, _mockLoadScreen.Object, _mockDatabase.Object, _mockServiceProvider.Object);
     }
 
     #endregion
@@ -47,15 +42,11 @@ public class AssetServiceTests
     public async Task InitializeAsync_ValidOptions_InitializesSuccessfully()
     {
         // Arrange
-        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(
-            It.IsAny<IAssetInitializationContext>(),
-            It.IsAny<CancellationToken>()))
+        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(It.IsAny<IAssetInitializationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Out.Success());
 
         // Act
-        var result = await _assetService.InitializeAsync(
-            new AssetServiceOptions { InstantiatorIdleDisposalTimeout = TimeSpan.FromMinutes(1) },
-            CancellationToken.None);
+        var result = await _assetService.InitializeAsync(new AssetServiceOptions { InstantiatorIdleDisposalTimeout = TimeSpan.FromMinutes(1) }, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -65,15 +56,11 @@ public class AssetServiceTests
     public async Task InitializeAsync_DefaultOptions_InitializesSuccessfully()
     {
         // Arrange
-        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(
-            It.IsAny<IAssetInitializationContext>(),
-            It.IsAny<CancellationToken>()))
+        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(It.IsAny<IAssetInitializationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Out.Success());
 
         // Act
-        var result = await _assetService.InitializeAsync(
-            null,
-            CancellationToken.None);
+        var result = await _assetService.InitializeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsSuccessful);
@@ -84,15 +71,11 @@ public class AssetServiceTests
     {
         // Arrange
         var errorMessage = "Initialization failed";
-        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(
-            It.IsAny<IAssetInitializationContext>(),
-            It.IsAny<CancellationToken>()))
+        _mockAssetManager.Setup(m => m.InitializeDatabaseAsync(It.IsAny<IAssetInitializationContext>(), It.IsAny<CancellationToken>()))
             .ReturnsAsync(Out.InvalidRequest(errorMessage));
 
         // Act
-        var result = await _assetService.InitializeAsync(
-            null,
-            CancellationToken.None);
+        var result = await _assetService.InitializeAsync(cancellationToken: TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccessful);
@@ -114,10 +97,17 @@ public class AssetServiceTests
     {
         // Arrange
         var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
+        mockLoader.SetupGet(m => m.LoadProgress)
+            .Returns(LoadProgress.NotStarted);
+
+        _assetService._loaderLookup[new("Abc")] = mockLoader.Object;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        mockLoader.Verify(m => m.Update(It.IsAny<TimeSpan>()), Times.Once);
+        Assert.Single(_assetService._loaderLookup);
     }
 
     [Fact]
@@ -125,10 +115,17 @@ public class AssetServiceTests
     {
         // Arrange
         var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.Complete);
+        mockLoader.SetupGet(m => m.LoadProgress)
+            .Returns(LoadProgress.Complete);
+
+        _assetService._loaderLookup[new("Abc")] = mockLoader.Object;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        mockLoader.Verify(m => m.Update(It.IsAny<TimeSpan>()), Times.Once);
+        Assert.Empty(_assetService._loaderLookup);
     }
 
     [Fact]
@@ -136,10 +133,17 @@ public class AssetServiceTests
     {
         // Arrange
         var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(new LoadProgress(Out.InvalidRequest("failed")));
+        mockLoader.SetupGet(m => m.LoadProgress)
+            .Returns(new LoadProgress(Out.InvalidRequest("failed")));
+
+        _assetService._loaderLookup[new("Abc")] = mockLoader.Object;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        mockLoader.Verify(m => m.Update(It.IsAny<TimeSpan>()), Times.Once);
+        Assert.Empty(_assetService._loaderLookup);
     }
 
     [Fact]
@@ -152,52 +156,82 @@ public class AssetServiceTests
         var mockLoader2 = new Mock<IModuleLoader>();
         mockLoader2.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
 
+
+        _assetService._loaderLookup[new("Abc")] = mockLoader1.Object;
+        _assetService._loaderLookup[new("Def")] = mockLoader2.Object;
+
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        mockLoader1.Verify(m => m.Update(It.IsAny<TimeSpan>()), Times.Once);
+        mockLoader2.Verify(m => m.Update(It.IsAny<TimeSpan>()), Times.Once);
+        Assert.Single(_assetService._loaderLookup);
     }
 
     [Fact]
     public void Update_IdleDisposalTimeoutDisabled_DoesNotDisposeInstantiators()
     {
         // Arrange
-        var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
+        var mockInstantiator = new Mock<IAssetInstantiator>();
+        var entry = new EntityLookupEntry(mockInstantiator.Object, Mock.Of<IInvoker>())
+        {
+            LastUsed = DateTime.Now
+        };
+
+        _assetService._entryLookup[new(Guid.NewGuid())] = entry;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        Assert.Single(_assetService._entryLookup);
+
+        mockInstantiator.Verify(m => m.Dispose(), Times.Never);
     }
 
     [Fact]
     public void Update_IdleInstantiatorExpired_DisposesAndRemoves()
     {
         // Arrange
-        var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
+        _assetService._options.InstantiatorIdleDisposalTimeout = TimeSpan.FromSeconds(1);
+
+        var mockInstantiator = new Mock<IAssetInstantiator>();
+        var entry = new EntityLookupEntry(mockInstantiator.Object, Mock.Of<IInvoker>())
+        {
+            LastUsed = new DateTime(2020, 1, 1)
+        };
+        _assetService._entryLookup[new(Guid.NewGuid())] = entry;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
+
+        // Assert
+        Assert.Empty(_assetService._entryLookup);
+
+        mockInstantiator.Verify(m => m.Dispose(), Times.Once);
     }
 
     [Fact]
     public void Update_IdleInstantiatorNotExpired_DoesNotDispose()
     {
         // Arrange
-        var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
+        _assetService._options.InstantiatorIdleDisposalTimeout = TimeSpan.FromSeconds(1);
+
+        var mockInstantiator = new Mock<IAssetInstantiator>();
+        var entry = new EntityLookupEntry(mockInstantiator.Object, Mock.Of<IInvoker>())
+        {
+            LastUsed = DateTime.Now.AddMinutes(5)
+        };
+        _assetService._entryLookup[new(Guid.NewGuid())] = entry;
 
         // Act
         _assetService.Update(TimeSpan.FromMilliseconds(100));
-    }
 
-    [Fact]
-    public void Update_IdleDisposalTimeoutZero_DoesNotDisposeInstantiators()
-    {
-        // Arrange
-        var mockLoader = new Mock<IModuleLoader>();
-        mockLoader.SetupGet(m => m.LoadProgress).Returns(LoadProgress.NotStarted);
+        // Assert
+        Assert.Single(_assetService._entryLookup);
 
-        // Act
-        _assetService.Update(TimeSpan.FromMilliseconds(100));
+        mockInstantiator.Verify(m => m.Dispose(), Times.Never);
     }
 
     #endregion
@@ -205,76 +239,89 @@ public class AssetServiceTests
     #region InstantiateAsync
 
     [Fact]
-    public void InstantiateAsync_NullParameters_ThrowsArgumentNullException()
+    public async Task InstantiateAsync_NullParameters_ThrowsArgumentNullException()
     {
-        // Act & Assert
-        var exception = Assert.ThrowsAsync<ArgumentNullException>(async () =>
-        {
-            await _assetService.InstantiateAsync<object, ITransform>(null!, CancellationToken.None);
-        });
+        // Arraange/Act/Assert
+        await Assert.ThrowsAsync<ArgumentNullException>(async () => await _assetService.InstantiateAsync<object, ITransform>(null!, TestContext.Current.CancellationToken));
+    }
 
-        Assert.NotNull(exception);
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task InstantiateAsync_CachedEntryFound_OptionsIncludeIdelTime_UpdatesLastUsed_ReturnsSuccessfully(bool useNullPreviousTime)
+    {
+        // Arrange
+        _assetService._options.InstantiatorIdleDisposalTimeout = TimeSpan.FromSeconds(5);
+
+        var previousUsed = DateTime.UtcNow.AddHours(-1);
+
+        var assetId = new EntityAssetIdentifier(Guid.NewGuid());
+        var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
+        mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
+            .Returns(1);
+
+        var mockDescriptorInvoker = Mock.Of<IInvoker>();
+        var entry = new EntityLookupEntry(mockInstantiator.Object, mockDescriptorInvoker) { LastUsed = useNullPreviousTime ? null : previousUsed };
+
+        _assetService._entryLookup[assetId] = entry;
+
+        var mockAssetRef = new Mock<IEntityAssetReference<ITransform>>();
+        mockAssetRef.SetupGet(m => m.AssetIdentifier)
+            .Returns(assetId);
+
+        var parameters = new InstantiationParameters<ITransform>
+        {
+            AssetReference = mockAssetRef.Object,
+            Transform = Mock.Of<ITransform>(),
+            Services = null
+        };
+
+        // Act
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccessful);
+        if (useNullPreviousTime)
+        {
+            Assert.NotNull(entry.LastUsed);
+        }
+        else
+        {
+            Assert.NotEqual(previousUsed, entry.LastUsed);
+        }
     }
 
     [Fact]
-    public async Task InstantiateAsync_CachedEntryFound_UpdatesLastUsedAndReturnsInstantiator()
+    public async Task InstantiateAsync_CachedEntryFound_OptionsIncludeIdelTime_DoesNotUpdateLastUsedTime_ReturnsSuccessfully()
     {
         // Arrange
         var assetId = new EntityAssetIdentifier(Guid.NewGuid());
-        var mockInstantiator = Mock.Of<IAssetInstantiator<object, ITransform>>();
-        var mockDescriptorInvoker = Mock.Of<IInvoker>();
-        var entry = new EntityLookupEntry(mockInstantiator, mockDescriptorInvoker) { LastUsed = DateTime.UtcNow.AddHours(-1) };
-
-        _mockDatabase.Setup(d => d.GetEntity(assetId))
-            .Returns((IEntityDescriptor?)null);
-
-        var mockAssetRef = Mock.Of<IEntityAssetReference<ITransform>>(r => r.AssetIdentifier == assetId);
-
-        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
-            It.IsAny<IEntityAssetReference<ITransform>>(),
-            It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.InvalidRequest<IAssetInstantiator<object, ITransform>>("not reached")));
-
-        var parameters = new InstantiationParameters<ITransform>
-        {
-            AssetReference = mockAssetRef,
-            Transform = Mock.Of<ITransform>(),
-            Services = null
-        };
-
-        // Act
-        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
-
-        // Assert
-        Assert.True(result.IsSuccessful);
-    }
-
-    [Fact]
-    public async Task InstantiateAsync_NewInstantiator_GetInstantiatorSuccess_ReturnsEntity()
-    {
-        // Arrange
         var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
-        var mockEntity = new Mock<object>();
         mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
-            .Returns(mockEntity.Object);
+            .Returns(1);
 
-        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
-            It.IsAny<IEntityAssetReference<ITransform>>(),
-            It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.Success(mockInstantiator.Object)));
+        var mockDescriptorInvoker = Mock.Of<IInvoker>();
+        var entry = new EntityLookupEntry(mockInstantiator.Object, mockDescriptorInvoker) { LastUsed = null };
+
+        _assetService._entryLookup[assetId] = entry;
+
+        var mockAssetRef = new Mock<IEntityAssetReference<ITransform>>();
+        mockAssetRef.SetupGet(m => m.AssetIdentifier)
+            .Returns(assetId);
 
         var parameters = new InstantiationParameters<ITransform>
         {
-            AssetReference = Mock.Of<IEntityAssetReference<ITransform>>(r => r.AssetIdentifier == null),
+            AssetReference = mockAssetRef.Object,
             Transform = Mock.Of<ITransform>(),
             Services = null
         };
 
         // Act
-        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsSuccessful);
+        Assert.Null(entry.LastUsed);
     }
 
     [Fact]
@@ -285,7 +332,7 @@ public class AssetServiceTests
         _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
             It.IsAny<IEntityAssetReference<ITransform>>(),
             It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.InvalidRequest<IAssetInstantiator<object, ITransform>>(errorMessage)));
+            .Returns(Task.FromResult(Out.InvalidRequest<IAssetInstantiator<object, ITransform>>(errorMessage)));
 
         var parameters = new InstantiationParameters<ITransform>
         {
@@ -295,14 +342,14 @@ public class AssetServiceTests
         };
 
         // Act
-        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.False(result.IsSuccessful);
     }
 
     [Fact]
-    public async Task InstantiateAsync_WithServices_InjectsDependencies()
+    public async Task InstantiateAsync_NewInstantiator_NoServices_GetInstantiatorSuccess_ReturnsEntity()
     {
         // Arrange
         var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
@@ -310,24 +357,76 @@ public class AssetServiceTests
         mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
             .Returns(mockEntity.Object);
 
-        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
-            It.IsAny<IEntityAssetReference<ITransform>>(),
-            It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.Success(mockInstantiator.Object)));
-
-        var mockServices = new Mock<IServiceProvider>();
+        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(It.IsAny<IEntityAssetReference<ITransform>>(), It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Out.Success(mockInstantiator.Object)));
 
         var parameters = new InstantiationParameters<ITransform>
         {
             AssetReference = Mock.Of<IEntityAssetReference<ITransform>>(r => r.AssetIdentifier == null),
             Transform = Mock.Of<ITransform>(),
+            Services = null
+        };
+
+        // Act
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
+
+        // Assert
+        Assert.True(result.IsSuccessful);
+    }
+
+    [Fact]
+    public async Task InstantiateAsync_WithServices_InstantiatorNotCached_CachesAndInjectsDependencies_ReturnsSuccessfully()
+    {
+        // Arrange
+        var testEntity = new TestEntity()
+        {
+            ServiceProvider = null!
+        };
+        var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
+        mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
+            .Returns(testEntity);
+
+        mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
+            .Returns((ITransform _, Action<object> action) =>
+            {
+                action(testEntity);
+                return testEntity;
+            });
+
+        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
+            It.IsAny<IEntityAssetReference<ITransform>>(),
+            It.IsAny<CancellationToken>()))
+            .Returns(Task.FromResult(Out.Success(mockInstantiator.Object)));
+
+        var mockServices = new Mock<IServiceProvider>();
+        mockServices.Setup(m => m.GetService(It.Is<Type>(t => t == typeof(IServiceProvider))))
+            .Returns(mockServices.Object);
+
+        var identifier = new EntityAssetIdentifier(Guid.NewGuid());
+        var mockReference = new Mock<IEntityAssetReference<ITransform>>();
+        mockReference.SetupGet(m => m.AssetIdentifier)
+            .Returns(identifier);
+
+        var mockDescriptor = new Mock<IEntityDescriptor>();
+        _mockDatabase.Setup(d => d.GetEntity(identifier))
+            .Returns(mockDescriptor.Object);
+
+        var parameters = new InstantiationParameters<ITransform>
+        {
+            AssetReference = mockReference.Object,
+            Transform = Mock.Of<ITransform>(),
             Services = mockServices.Object
         };
 
         // Act
-        await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
 
         // Assert
+        Assert.True(result.IsSuccessful);
+        Assert.Equal(mockServices.Object, testEntity.ServiceProvider);
+
+        Assert.Single(_assetService._entryLookup);
+        Assert.Equal(_assetService._entryLookup[identifier].Instantiator, mockInstantiator.Object);
     }
 
     [Fact]
@@ -337,12 +436,16 @@ public class AssetServiceTests
         var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
         var mockEntity = new Mock<object>();
         mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
-            .Returns(mockEntity.Object);
+            .Returns((ITransform _, Action<object> action) =>
+            {
+                action(mockEntity.Object);
+                return mockEntity.Object;
+            });
 
         _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
             It.IsAny<IEntityAssetReference<ITransform>>(),
             It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.Success(mockInstantiator.Object)));
+            .Returns(Task.FromResult(Out.Success(mockInstantiator.Object)));
 
         var parameters = new InstantiationParameters<ITransform>
         {
@@ -352,44 +455,11 @@ public class AssetServiceTests
         };
 
         // Act
-        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
+        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, TestContext.Current.CancellationToken);
 
         // Assert
         Assert.True(result.IsSuccessful);
-    }
-
-    [Fact]
-    public async Task InstantiateAsync_WithDescriptor_CreatesDescriptorInvoker()
-    {
-        // Arrange
-        var assetId = new EntityAssetIdentifier(Guid.NewGuid());
-        var mockDescriptor = new Mock<IEntityDescriptor>();
-
-        _mockDatabase.Setup(d => d.GetEntity(assetId))
-            .Returns(mockDescriptor.Object);
-
-        var mockInstantiator = new Mock<IAssetInstantiator<object, ITransform>>();
-        var mockEntity = new Mock<object>();
-        mockInstantiator.Setup(m => m.Instantiate(It.IsAny<ITransform>(), It.IsAny<Action<object>>()))
-            .Returns(mockEntity.Object);
-
-        _mockAssetManager.Setup(m => m.GetInstantiatorAsync<object, ITransform>(
-            It.IsAny<IEntityAssetReference<ITransform>>(),
-            It.IsAny<CancellationToken>()))
-            .Returns(Task.FromResult<Output<IAssetInstantiator<object, ITransform>>>(Out.Success(mockInstantiator.Object)));
-
-        var parameters = new InstantiationParameters<ITransform>
-        {
-            AssetReference = Mock.Of<IEntityAssetReference<ITransform>>(r => r.AssetIdentifier == assetId),
-            Transform = Mock.Of<ITransform>(),
-            Services = null
-        };
-
-        // Act
-        var result = await _assetService.InstantiateAsync<object, ITransform>(parameters, CancellationToken.None);
-
-        // Assert
-        Assert.True(result.IsSuccessful);
+        Assert.Empty(_assetService._entryLookup);
     }
 
     #endregion
@@ -399,8 +469,8 @@ public class AssetServiceTests
     [Fact]
     public void LoadModule_NullParameters_ThrowsArgumentNullException()
     {
-        // Act & Assert
-        var exception = Assert.Throws<ArgumentNullException>(() => _assetService.LoadModule((ModuleLoadParameters)null!));
+        // Arrange/Act/Assert
+        Assert.Throws<ArgumentNullException>(() => _assetService.LoadModule((ModuleLoadParameters)null!));
     }
 
     [Fact]
@@ -426,6 +496,7 @@ public class AssetServiceTests
         mockDescriptor.SetupGet(m => m.AssetIdentifier).Returns(moduleIdentifier);
 
         var mockLoader = new Mock<IModuleLoader>();
+        _assetService._loaderLookup[moduleIdentifier] = mockLoader.Object;
 
         _mockDatabase.Setup(d => d.GetModule(moduleIdentifier))
             .Returns(mockDescriptor.Object);
@@ -434,10 +505,11 @@ public class AssetServiceTests
         var result = _assetService.LoadModule(new ModuleLoadParameters("test"));
 
         // Assert
+        Assert.Equal(mockLoader.Object, result);
     }
 
     [Fact]
-    public void LoadModule_ValidModule_ReturnsLoader()
+    public void LoadModule_LoaderTypeNotAValidLoader_ReturnsNull()
     {
         // Arrange
         var moduleIdentifier = new ModuleAssetIdentifier("test");
@@ -447,44 +519,43 @@ public class AssetServiceTests
         _mockDatabase.Setup(d => d.GetModule(moduleIdentifier))
             .Returns(mockDescriptor.Object);
 
+        mockDescriptor.Setup(m => m.GetModuleLoaderType()).Returns(typeof(ModuleLoadParameters));
+
         // Act
         var result = _assetService.LoadModule(new ModuleLoadParameters("test"));
 
         // Assert
+        Assert.Null(result);
     }
 
-    [Fact]
-    public void LoadModule_InvalidLoaderType_ReturnsNull()
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public void LoadModule_ReplaceBehavior_CallsLoadScreenInitialize(bool useLoadScreen)
     {
         // Arrange
         var moduleIdentifier = new ModuleAssetIdentifier("test");
         var mockDescriptor = new Mock<IModuleDescriptor>();
-        mockDescriptor.SetupGet(m => m.AssetIdentifier).Returns(moduleIdentifier);
+        mockDescriptor.SetupGet(m => m.AssetIdentifier)
+            .Returns(moduleIdentifier);
+
+        mockDescriptor.Setup(m => m.GetModuleLoaderType())
+            .Returns(typeof(TestLoader));
 
         _mockDatabase.Setup(d => d.GetModule(moduleIdentifier))
             .Returns(mockDescriptor.Object);
 
         // Act
-        var result = _assetService.LoadModule(new ModuleLoadParameters("test"));
+        var result = _assetService.LoadModule(new ModuleLoadParameters("test")
+        {
+            LoadBehavior = useLoadScreen ? ModuleLoadBehavior.Replace : ModuleLoadBehavior.Additive
+        });
 
         // Assert
-    }
+        Assert.NotNull(result);
+        Assert.Equal(typeof(TestLoader), result.GetType());
 
-    [Fact]
-    public void LoadModule_ReplaceBehavior_CallsLoadScreenInitialize()
-    {
-        // Arrange
-        var moduleIdentifier = new ModuleAssetIdentifier("test");
-        var mockDescriptor = new Mock<IModuleDescriptor>();
-        mockDescriptor.SetupGet(m => m.AssetIdentifier).Returns(moduleIdentifier);
-
-        _mockDatabase.Setup(d => d.GetModule(moduleIdentifier))
-            .Returns(mockDescriptor.Object);
-
-        // Act
-        var result = _assetService.LoadModule(new ModuleLoadParameters("test"));
-
-        // Assert
+        _mockLoadScreen.Verify(m => m.Initialize(It.IsAny<ModuleLoadParameters>(), It.IsAny<IModuleLoadContext>()), useLoadScreen ? Times.Once : Times.Never);
     }
 
     #endregion
@@ -505,6 +576,7 @@ public class AssetServiceTests
 
         // Assert
         Assert.Equal(descriptor.Object, actual);
+        _mockDatabase.Verify(m => m.GetModule(It.IsAny<ModuleAssetIdentifier>()), Times.Once);
     }
 
     [Fact]
@@ -521,6 +593,7 @@ public class AssetServiceTests
 
         // Assert
         Assert.Null(actual);
+        _mockDatabase.Verify(m => m.GetModule(It.IsAny<ModuleAssetIdentifier>()), Times.Once);
     }
 
     #endregion
@@ -528,7 +601,7 @@ public class AssetServiceTests
     #region GetEntityDescriptor
 
     [Fact]
-    public void GetEntityDescriptor_ValidIdentifier_ReturnsDescriptor()
+    public void GetEntityDescriptor_CallsDatabase_ReturnsExpected()
     {
         // Arrange
         var descriptor = Mock.Of<IEntityDescriptor>();
@@ -540,6 +613,7 @@ public class AssetServiceTests
 
         // Assert
         Assert.Equal(descriptor, actual);
+        _mockDatabase.Verify(m => m.GetEntity(It.IsAny<EntityAssetIdentifier>()), Times.Once);
     }
 
     [Fact]
@@ -556,6 +630,7 @@ public class AssetServiceTests
 
         // Assert
         Assert.Null(actual);
+        _mockDatabase.Verify(m => m.GetEntity(It.IsAny<EntityAssetIdentifier>()), Times.Once);
     }
 
     #endregion
@@ -574,7 +649,7 @@ public class AssetServiceTests
             mockDescriptor1,
             mockDescriptor2
         };
-        _mockDatabase.Setup(d => d.GetModules(It.IsAny<AssetSearchOptions>()))
+        _mockDatabase.Setup(d => d.GetModules(It.IsAny<AssetSearchOptions?>()))
             .Returns(descriptors);
 
         // Act
@@ -590,7 +665,7 @@ public class AssetServiceTests
     {
         // Arrange
         var descriptors = new List<IModuleDescriptor>();
-        _mockDatabase.Setup(d => d.GetModules(It.IsAny<AssetSearchOptions>()))
+        _mockDatabase.Setup(d => d.GetModules(It.IsAny<AssetSearchOptions?>()))
             .Returns(descriptors);
 
         // Act
@@ -635,7 +710,7 @@ public class AssetServiceTests
             mockDescriptor1,
             mockDescriptor2
         };
-        _mockDatabase.Setup(d => d.GetEntities(It.IsAny<AssetSearchOptions>()))
+        _mockDatabase.Setup(d => d.GetEntities(It.IsAny<AssetSearchOptions?>()))
             .Returns(descriptors);
 
         // Act
@@ -651,7 +726,7 @@ public class AssetServiceTests
     {
         // Arrange
         var descriptors = new List<IEntityDescriptor>();
-        _mockDatabase.Setup(d => d.GetEntities(It.IsAny<AssetSearchOptions>()))
+        _mockDatabase.Setup(d => d.GetEntities(It.IsAny<AssetSearchOptions?>()))
             .Returns(descriptors);
 
         // Act

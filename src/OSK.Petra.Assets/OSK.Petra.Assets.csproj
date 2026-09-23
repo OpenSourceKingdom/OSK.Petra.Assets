@@ -4,10 +4,20 @@
 		<TargetFramework>netstandard2.1</TargetFramework>
 		<Nullable>enable</Nullable>
 		<LangVersion>14</LangVersion>
-	</PropertyGroup>
 
+		<Description>An asset management and handler for the Petra framework. Provides logic for instantiating, searching, describing, caching, etc. assets for a game other application</Description>
+		<PackageTags>OpenSourceKingdom, OpenSource, Petra, Game, Framework, Suite, Tool, Asset, Load, Module, Instantiate, Prefab, Scene, Persistent, Database</PackageTags>
+		<Title>OSK.Petra.Assets</Title>
+		<Authors>BlankDev117</Authors>
+		<PackageReadmeFile>README.md</PackageReadmeFile>
+		<RepositoryUrl>https://github.com/OpenSourceKingdom/OSK.Petra.Assets</RepositoryUrl>
+		<RepositoryType>git</RepositoryType>
+		<PackageLicenseExpression>MIT</PackageLicenseExpression>
+		<GenerateDocumentationFile>true</GenerateDocumentationFile>
+	</PropertyGroup>
+	
 	<ItemGroup>
-	  <None Include="Ports\IAssetManager.cs" />
+		<None Include="..\..\README.md" Pack="true" PackagePath="\" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -15,8 +25,8 @@
 		<PackageReference Include="OSK.Operations.Workflows" Version="1.1.0" />
 		<PackageReference Include="OSK.Petra.Modules.Services" Version="0.5.0" />
 		<PackageReference Include="PolySharp" Version="1.16.0">
-		  <PrivateAssets>all</PrivateAssets>
-		  <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+			<PrivateAssets>all</PrivateAssets>
+			<IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
 		</PackageReference>
 	</ItemGroup>
 

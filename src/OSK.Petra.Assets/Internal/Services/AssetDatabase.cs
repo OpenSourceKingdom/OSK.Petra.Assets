@@ -47,11 +47,9 @@ internal class AssetDatabase : IAssetDatabase
             ? _moduleDescriptors.Values
             : _moduleDescriptors.Values.Where(moduleDescriptor => searchOptions.Value.AssetPackageIds.Contains(moduleDescriptor.AssetIdentifier.AssetPackageId));
 
-        if (searchOptions?.TagMatchers is { Length: > 0 })
+        if (searchOptions?.TagFilters is { Length: > 0 })
         {
-            descriptors = descriptors.Where(descriptor => searchOptions.Value.TagClauseMatchBehavior == TagClauseMatchBehavior.Any
-                ? searchOptions.Value.TagMatchers.Any(matcher => descriptor.Tags.Any(matcher.Matches))
-                : searchOptions.Value.TagMatchers.All(matcher => descriptor.Tags.Any(matcher.Matches)));
+            descriptors = descriptors.Where(descriptor => searchOptions.Value.TagFilters.All(matcher => descriptor.Tags.Any(matcher.Matches)));
         }
 
         return descriptors;
@@ -68,11 +66,9 @@ internal class AssetDatabase : IAssetDatabase
             ? _entityDescriptors.Values
             : _entityDescriptors.Values.Where(moduleDescriptor => searchOptions.Value.AssetPackageIds.Contains(moduleDescriptor.AssetIdentifier.AssetPackageId));
 
-        if (searchOptions?.TagMatchers is { Length: > 0 })
+        if (searchOptions?.TagFilters is { Length: > 0 })
         {
-            descriptors = descriptors.Where(descriptor => searchOptions.Value.TagClauseMatchBehavior == TagClauseMatchBehavior.Any
-                ? searchOptions.Value.TagMatchers.Any(matcher => descriptor.Tags.Any(matcher.Matches))
-                : searchOptions.Value.TagMatchers.All(matcher => descriptor.Tags.Any(matcher.Matches)));
+            descriptors = descriptors.Where(descriptor => searchOptions.Value.TagFilters.All(matcher => descriptor.Tags.Any(matcher.Matches)));
         }
 
         return descriptors;
@@ -88,8 +84,12 @@ internal class AssetDatabase : IAssetDatabase
 
     public void UpdateProgress(float progress, string? message = null)
     {
+        if (InitializationState is not ProgressState.InProgress)
+        {
+            return;
+        }
+
         InitializationProgress = new(progress, message);
-        
     }
 
     public void AddAssets(IEnumerable<IAssetDescriptor> assetDescriptors)
